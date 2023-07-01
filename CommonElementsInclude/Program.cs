@@ -59,7 +59,6 @@ namespace CommonElementsInclude
             */
 
             bool minify = false;
-            args = new string[] { };
             foreach (string arg in args)
             {
                 if (arg == "--min")
