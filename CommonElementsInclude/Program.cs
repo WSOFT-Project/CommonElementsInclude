@@ -3,6 +3,7 @@ using System.Net;
 using System.Reflection.PortableExecutable;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Microsoft.Win32.SafeHandles;
 
 namespace CommonElementsInclude
 {
@@ -12,7 +13,7 @@ namespace CommonElementsInclude
         const string RENDER_BODY = "<RenderBody/>";
         static void Main(string[] args)
         {
-            Console.WriteLine("WSOFT CommonElementsInclude Version 0.6");
+            Console.WriteLine("WSOFT CommonElementsInclude Version 0.7");
             Console.WriteLine("Copyright (c) WSOFT All rights reserved.");
             Console.Write("レイアウトファイルを取得しています...");
             var wc = new WebClient();
@@ -59,6 +60,7 @@ namespace CommonElementsInclude
             */
 
             bool minify = false;
+            args = new string[] { "K:\\LocalFiles\\Desktop\\wsoft.ws" };
             foreach (string arg in args)
             {
                 if (arg == "--min")
@@ -69,47 +71,87 @@ namespace CommonElementsInclude
                 Console.WriteLine(dir+"を検索しています...");
                 if (Directory.Exists(dir))
                 {
-                    ReplaceDirectory(dir,"*.html",minify);
-                    ReplaceDirectory(dir, "*.js", minify);
+                    ReplaceDirectory(dir,"site",minify);
                 }
             }
             Console.WriteLine("完了しました。");
         }
-        static void ReplaceDirectory(string dir,string pattern,bool minify)
+        static void ReplaceDirectory(string dir,string target,bool minify)
         {
-            foreach (string file in Directory.GetFiles(dir,pattern, SearchOption.AllDirectories))
+            FormatDirectory(Path.Combine(dir,target));
+            foreach (string file in Directory.GetFiles(dir,"*", SearchOption.AllDirectories))
             {
-                string raw = File.ReadAllText(file);
-                string new_str = raw;
-                bool replace = false;
-                if(!Regex.IsMatch(raw, "<[ ]*common[ ]*role[ ]*=[ ]*\"layout\"[ ]*/[ ]*>"))
+                if (!file.Contains(".git"))
                 {
-                    foreach (Match m in Regex.Matches(raw, "<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*>(.*?)<\\/common>|<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*\\/?>\r\n"))
+                    string to = Path.Combine(dir, target, file.Substring(dir.Length + 1));
+                    CreateDirIfNotExists(Path.GetDirectoryName(to));
+                    if (file.ToLower().EndsWith(".html") || file.ToLower().EndsWith(".js"))
                     {
-                        if (m.Groups.Count > 3)
+                        string raw = File.ReadAllText(file);
+                        string new_str = raw;
+                        bool replace = false;
+                        if (!Regex.IsMatch(raw, "<[ ]*common[ ]*role[ ]*=[ ]*\"layout\"[ ]*/[ ]*>"))
                         {
-                            string context = m.Groups[2].Value;
-                            string key = m.Groups[3].Value;
-                            if (string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(m.Groups[1].Value))
-                                key = m.Groups[1].Value;
+                            foreach (Match m in Regex.Matches(raw, "<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*>(.*?)<\\/common>|<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*\\/?>"))
+                            {
+                                if (m.Groups.Count > 3)
+                                {
+                                    string context = m.Groups[2].Value;
+                                    string key = m.Groups[3].Value;
+                                    if (string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(m.Groups[1].Value))
+                                        key = m.Groups[1].Value;
 
-                            if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(context) && KeyToTemplate.ContainsKey(key))
-                                new_str = new_str.Replace(m.Value, KeyToTemplate[key].Replace(RENDER_BODY, context));
-                            replace = true;
+                                    if (!string.IsNullOrEmpty(key) && KeyToTemplate.ContainsKey(key))
+                                        new_str = new_str.Replace(m.Value, KeyToTemplate[key].Replace(RENDER_BODY, context));
+                                    replace = true;
 
+                                }
+                            }
+                        }
+                        if (minify)
+                        {
+                            new_str = new_str.Replace("\r", "").Replace("\n", "");
+                        }
+                        if (replace || minify)
+                        {
+                            File.WriteAllText(to, new_str);
+                            Console.WriteLine(file + "に対して置き換えを行いました");
+                        }
+                        else
+                        {
+                            File.Copy(file, to, true);
                         }
                     }
+                    else
+                    {
+                        File.Copy(file, to, true);
+                    }
                 }
-                if (minify)
-                {
-                    new_str = new_str.Replace("\r", "").Replace("\n", "");
-                }
-                File.WriteAllText(file, new_str);
-                if (replace || minify)
-                {
-                    Console.WriteLine(file + "に対して置き換えを行いました");
-                }
+                
             }
+        }
+        static void CreateDirIfNotExists(string dir)
+        {
+            string top = Path.GetDirectoryName(Path.GetFullPath(dir));
+            if (!Directory.Exists(dir))
+            {
+                CreateDirIfNotExists(top);
+                Directory.CreateDirectory(dir);
+            }
+                
+        }
+        static void FormatDirectory(string dir)
+        {
+            CreateDirIfNotExists(dir);
+            foreach(string ds in Directory.GetDirectories(dir))
+            {
+                FormatDirectory(ds);
+            }
+            foreach(string fi in Directory.GetFiles(dir, "*"))
+            {
+                File.Delete(fi);
+            }
+            Directory.Delete(dir);
         }
     }
 }
