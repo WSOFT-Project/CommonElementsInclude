@@ -12,7 +12,7 @@ namespace CommonElementsInclude
         const string RENDER_BODY = "<RenderBody/>";
         static void Main(string[] args)
         {
-            Console.WriteLine("WSOFT CommonElementsInclude Version 0.5");
+            Console.WriteLine("WSOFT CommonElementsInclude Version 0.6");
             Console.WriteLine("Copyright (c) WSOFT All rights reserved.");
             Console.Write("レイアウトファイルを取得しています...");
             var wc = new WebClient();
@@ -84,12 +84,14 @@ namespace CommonElementsInclude
                 bool replace = false;
                 if(!Regex.IsMatch(raw, "<[ ]*common[ ]*role[ ]*=[ ]*\"layout\"[ ]*/[ ]*>"))
                 {
-                    foreach (Match m in Regex.Matches(raw, "<(common)\\s+(?:[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*?|[^>]*?\\bclass\\s*=\\s*([^\"'\\s>]+)[^>]*?)\\s*\\/?>([\\s\\S]*?)<\\/\\1\\s*>"))
+                    foreach (Match m in Regex.Matches(raw, "<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*>(.*?)<\\/common>|<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*\\/?>\r\n"))
                     {
-                        if (m.Groups.Count > 4)
+                        if (m.Groups.Count > 3)
                         {
-                            string context = m.Groups[4].Value;
-                            string key = m.Groups[2].Value;
+                            string context = m.Groups[2].Value;
+                            string key = m.Groups[3].Value;
+                            if (string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(m.Groups[1].Value))
+                                key = m.Groups[1].Value;
 
                             if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(context) && KeyToTemplate.ContainsKey(key))
                                 new_str = new_str.Replace(m.Value, KeyToTemplate[key].Replace(RENDER_BODY, context));
