@@ -12,7 +12,7 @@ namespace CommonElementsInclude
         const string RENDER_BODY = "<RenderBody/>";
         static void Main(string[] args)
         {
-            Console.WriteLine("WSOFT CommonElementsInclude Version 0.4");
+            Console.WriteLine("WSOFT CommonElementsInclude Version 0.5");
             Console.WriteLine("Copyright (c) WSOFT All rights reserved.");
             Console.Write("レイアウトファイルを取得しています...");
             var wc = new WebClient();
