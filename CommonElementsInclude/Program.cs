@@ -11,7 +11,7 @@ namespace CommonElementsInclude
 
         private static void Main(string[] args)
         {
-            Console.WriteLine("WSOFT CommonElementsInclude Version 0.8");
+            Console.WriteLine("WSOFT CommonElementsInclude Version 0.9");
             Console.WriteLine("Copyright (c) WSOFT All rights reserved.");
 
             if (args.Length < 1)
@@ -76,17 +76,23 @@ namespace CommonElementsInclude
 
             bool minify = false;
             args = new string[] { "K:\\LocalFiles\\Desktop\\wsoft.ws" };
+            string target = "site";
             foreach (string arg in args)
             {
                 if (arg == "--min")
                 {
                     continue;
                 }
+                if (arg.StartsWith("--target:"))
+                {
+                    target = arg.Substring(9);
+                    continue;
+                }
                 string dir = Path.GetFullPath(arg);
                 Console.WriteLine(dir + "を検索しています...");
                 if (Directory.Exists(dir))
                 {
-                    ReplaceDirectory(dir, "site", minify);
+                    ReplaceDirectory(dir, target, minify);
                 }
             }
             Console.WriteLine("完了しました。");
@@ -108,7 +114,7 @@ namespace CommonElementsInclude
                         bool replace = false;
                         if (!Regex.IsMatch(raw, "<[ ]*common[ ]*role[ ]*=[ ]*\".*\"[ ]*/[ ]*>"))
                         {
-                            foreach (Match m in Regex.Matches(raw, "<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*>(.*?)<\\/common>|<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*\\/?>"))
+                            foreach (Match m in Regex.Matches(raw, "<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*>[\\s]*(.*?)[\\s]*<\\/common>|<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*\\/?>"))
                             {
                                 if (m.Groups.Count > 3)
                                 {
@@ -130,18 +136,17 @@ namespace CommonElementsInclude
                                         {
                                             try
                                             {
-                                                XElement xml = XElement.Parse(context);
-
-                                                foreach (XElement vars in xml.Elements())
+                                                XElement xml = XElement.Parse("<root>"+context+"</root>");
+                                                foreach (XElement vars in from item in xml.Elements("arg") select item)
                                                 {
-                                                    template=template.Replace("@"+vars.Name.ToString(),vars.Value);
+                                                    template=template.Replace("@"+ vars.Attribute("name").Value, vars.Value);
                                                 }
                                             }
-                                            catch { }
+                                            catch {  }
                                         }
 
                                         /// テンプレートで置換
-                                        new_str = new_str.Replace(m.Value,new_str);
+                                        new_str = new_str.Replace(m.Value,template);
 
                                         replace = true;
                                     }
