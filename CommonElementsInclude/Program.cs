@@ -114,7 +114,7 @@ namespace CommonElementsInclude
                         bool replace = false;
                         if (!Regex.IsMatch(raw, "<[ ]*common[ ]*role[ ]*=[ ]*\".*\"[ ]*/[ ]*>"))
                         {
-                            foreach (Match m in Regex.Matches(raw, "<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*>[\\s]*(.*?)[\\s]*<\\/common>|<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*\\/?>"))
+                            foreach (Match m in Regex.Matches(raw, "<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>/]*>([\\s\\S]*?)<\\/common>|<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*\\/?>"))
                             {
                                 if (m.Groups.Count > 3)
                                 {
@@ -130,14 +130,14 @@ namespace CommonElementsInclude
                                     if (!string.IsNullOrEmpty(key) && KeyToTemplate.ContainsKey(key))
                                     {
                                         string template = KeyToTemplate[key];
-
                                         /// テンプレート変数を埋めていく
                                         if (context.Contains('<'))
                                         {
+                                            Console.WriteLine(context);
                                             try
                                             {
                                                 XElement xml = XElement.Parse("<root>"+context+"</root>");
-                                                foreach (XElement vars in from item in xml.Elements("data") select item)
+                                                foreach (XElement vars in from item in xml.Elements("meta") select item)
                                                 {
                                                     template=template.Replace("@"+ vars.Attribute("name").Value, vars.Value);
                                                 }
