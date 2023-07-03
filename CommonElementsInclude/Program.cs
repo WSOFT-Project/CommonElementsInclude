@@ -137,7 +137,7 @@ namespace CommonElementsInclude
                                             try
                                             {
                                                 XElement xml = XElement.Parse("<root>"+context+"</root>");
-                                                foreach (XElement vars in from item in xml.Elements("arg") select item)
+                                                foreach (XElement vars in from item in xml.Elements("data") select item)
                                                 {
                                                     template=template.Replace("@"+ vars.Attribute("name").Value, vars.Value);
                                                 }
