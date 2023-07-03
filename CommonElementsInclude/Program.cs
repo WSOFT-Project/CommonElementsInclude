@@ -134,7 +134,7 @@ namespace CommonElementsInclude
 
                                                 foreach (XElement vars in xml.Elements())
                                                 {
-                                                    template=template.Replace(vars.Name.ToString(),vars.Value);
+                                                    template=template.Replace("@"+vars.Name.ToString(),vars.Value);
                                                 }
                                             }
                                             catch { }
