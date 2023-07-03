@@ -1,25 +1,38 @@
-﻿using System.IO;
-using System.Net;
-using System.Reflection.PortableExecutable;
-using System.Reflection;
+﻿using System.Net;
 using System.Text.RegularExpressions;
-using Microsoft.Win32.SafeHandles;
+using System.Xml.Linq;
 
 namespace CommonElementsInclude
 {
     internal class Program
     {
-        static Dictionary<string,string> KeyToTemplate= new Dictionary<string,string>();
-        const string RENDER_BODY = "<RenderBody/>";
-        static void Main(string[] args)
+        private static Dictionary<string, string> KeyToTemplate = new Dictionary<string, string>();
+        private const string RENDER_BODY = "<RenderBody/>";
+
+        private static void Main(string[] args)
         {
-            Console.WriteLine("WSOFT CommonElementsInclude Version 0.7");
+            Console.WriteLine("WSOFT CommonElementsInclude Version 0.8");
             Console.WriteLine("Copyright (c) WSOFT All rights reserved.");
+
+            if (args.Length < 1)
+                return;
+
+            string layout;
             Console.Write("レイアウトファイルを取得しています...");
-            var wc = new WebClient();
+            if (args[0].Contains("://"))
+            {
+                var wc = new WebClient();
+                layout = wc.DownloadString(args[0]);
+            }
+            else
+            {
+                layout = File.ReadAllText(args[0]);
+            }
+
+            args = args[1..];
+            
             try
             {
-                string layout = wc.DownloadString("https://wsoft.ws/common/layout.html");
                 Console.WriteLine("完了。");
                 Console.Write("ファイルを解析中...");
                 if (Regex.IsMatch(layout, "<[ ]*common[ ]*role[ ]*=[ ]*\"layout\"[ ]*/[ ]*>"))
@@ -32,7 +45,9 @@ namespace CommonElementsInclude
                             string key = m.Groups[2].Value;
 
                             if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(context))
+                            {
                                 KeyToTemplate[key] = context;
+                            }
                         }
                     }
                     Console.WriteLine("完了。");
@@ -45,7 +60,7 @@ namespace CommonElementsInclude
                     return;
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine("失敗。");
                 Console.WriteLine(ex.Message);
@@ -68,18 +83,19 @@ namespace CommonElementsInclude
                     continue;
                 }
                 string dir = Path.GetFullPath(arg);
-                Console.WriteLine(dir+"を検索しています...");
+                Console.WriteLine(dir + "を検索しています...");
                 if (Directory.Exists(dir))
                 {
-                    ReplaceDirectory(dir,"site",minify);
+                    ReplaceDirectory(dir, "site", minify);
                 }
             }
             Console.WriteLine("完了しました。");
         }
-        static void ReplaceDirectory(string dir,string target,bool minify)
+
+        private static void ReplaceDirectory(string dir, string target, bool minify)
         {
-            FormatDirectory(Path.Combine(dir,target));
-            foreach (string file in Directory.GetFiles(dir,"*", SearchOption.AllDirectories))
+            FormatDirectory(Path.Combine(dir, target));
+            foreach (string file in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
             {
                 if (!file.Contains(".git"))
                 {
@@ -90,20 +106,45 @@ namespace CommonElementsInclude
                         string raw = File.ReadAllText(file);
                         string new_str = raw;
                         bool replace = false;
-                        if (!Regex.IsMatch(raw, "<[ ]*common[ ]*role[ ]*=[ ]*\"layout\"[ ]*/[ ]*>"))
+                        if (!Regex.IsMatch(raw, "<[ ]*common[ ]*role[ ]*=[ ]*\".*\"[ ]*/[ ]*>"))
                         {
                             foreach (Match m in Regex.Matches(raw, "<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*>(.*?)<\\/common>|<common\\b[^>]*?\\bclass\\s*=\\s*[\"']([^\"']*)[\"'][^>]*\\/?>"))
                             {
                                 if (m.Groups.Count > 3)
                                 {
+                                    /// タグ内のコンテクスト
                                     string context = m.Groups[2].Value;
+                                    /// タグのclass属性
                                     string key = m.Groups[3].Value;
                                     if (string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(m.Groups[1].Value))
+                                    {
                                         key = m.Groups[1].Value;
+                                    }
 
                                     if (!string.IsNullOrEmpty(key) && KeyToTemplate.ContainsKey(key))
-                                        new_str = new_str.Replace(m.Value, KeyToTemplate[key].Replace(RENDER_BODY, context));
-                                    replace = true;
+                                    {
+                                        string template = KeyToTemplate[key];
+
+                                        /// テンプレート変数を埋めていく
+                                        if (context.Contains('<'))
+                                        {
+                                            try
+                                            {
+                                                XElement xml = XElement.Parse(context);
+
+                                                foreach (XElement vars in xml.Elements())
+                                                {
+                                                    template=template.Replace(vars.Name.ToString(),vars.Value);
+                                                }
+                                            }
+                                            catch { }
+                                        }
+
+                                        /// テンプレートで置換
+                                        new_str = new_str.Replace(m.Value,new_str);
+
+                                        replace = true;
+                                    }
 
                                 }
                             }
@@ -127,10 +168,11 @@ namespace CommonElementsInclude
                         File.Copy(file, to, true);
                     }
                 }
-                
+
             }
         }
-        static void CreateDirIfNotExists(string dir)
+
+        private static void CreateDirIfNotExists(string dir)
         {
             string top = Path.GetDirectoryName(Path.GetFullPath(dir));
             if (!Directory.Exists(dir))
@@ -138,16 +180,17 @@ namespace CommonElementsInclude
                 CreateDirIfNotExists(top);
                 Directory.CreateDirectory(dir);
             }
-                
+
         }
-        static void FormatDirectory(string dir)
+
+        private static void FormatDirectory(string dir)
         {
             CreateDirIfNotExists(dir);
-            foreach(string ds in Directory.GetDirectories(dir))
+            foreach (string ds in Directory.GetDirectories(dir))
             {
                 FormatDirectory(ds);
             }
-            foreach(string fi in Directory.GetFiles(dir, "*"))
+            foreach (string fi in Directory.GetFiles(dir, "*"))
             {
                 File.Delete(fi);
             }
