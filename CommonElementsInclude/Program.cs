@@ -60,6 +60,7 @@ namespace CommonElementsInclude
             */
 
             bool minify = false;
+            args = new string[] { "K:\\LocalFiles\\Desktop\\wsoft.ws" };
             foreach (string arg in args)
             {
                 if (arg == "--min")
